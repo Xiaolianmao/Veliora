@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#141414">
+<title>Veliora · 片源管理</title>
+<style>
+:root{--bg:#141414;--panel:#2a2a2a;--surface:#202020;--text:#fff;--dim:#b3b3b3;--red:#e50914;--line:#373737;--font:"Helvetica Neue",Helvetica,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;background:radial-gradient(ellipse at 85% -12%,rgba(229,9,20,.18),transparent 42%),var(--bg);min-height:100vh}
+button,input{font:inherit}button{cursor:pointer}header{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 max(22px,env(safe-area-inset-left));border-bottom:1px solid #292929;background:rgba(20,20,20,.88)}
+.brand{font-weight:900;letter-spacing:.6px;font-size:26px;color:var(--red)}.tag{border:1px solid #404040;color:var(--dim);font-size:12px;letter-spacing:.4px;border-radius:2px;padding:7px 10px}
+main{max-width:800px;margin:auto;padding:0 22px 80px}
+.hero{position:relative;padding:48px 0 32px;border-bottom:1px solid #303030}
+.hero:before{content:"";position:absolute;right:-12px;top:0;width:60%;height:100%;background:linear-gradient(90deg,var(--bg),rgba(20,20,20,.2)),radial-gradient(ellipse at center,rgba(229,9,20,.2),transparent 72%);pointer-events:none}
+.eyebrow{position:relative;font-size:12px;letter-spacing:2.2px;color:#e1a4a8;font-weight:700}
+h1{position:relative;font-size:clamp(30px,8vw,44px);margin:12px 0 14px;line-height:1.15;letter-spacing:-.5px}
+.hero p{position:relative;color:#c2c2c2;font-size:14px;line-height:1.75;max-width:490px;margin:0}
+.status{display:flex;align-items:center;gap:8px;color:#d0d0d0;font-size:13px;margin-top:20px}
+.dot{width:7px;height:7px;border-radius:50%;background:#a1a1a1}.dot.ready{background:#6dd8a5;box-shadow:0 0 0 3px rgba(109,216,165,.12)}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:32px 0 14px}.section-head h2{margin:0;font-size:19px;letter-spacing:.1px}.counter{color:var(--dim);font-size:13px}
+.sources{display:grid;gap:14px}
+.source{border:1px solid var(--line);background:linear-gradient(135deg,#292929,#202020);border-radius:9px;padding:18px}
+.source-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:8px}
+.source-index{font-size:12px;letter-spacing:1px;color:#999}.actions{display:flex;gap:8px;align-items:center}
+.del{border:0;color:#b7b7b7;background:#383838;border-radius:4px;padding:7px 12px;font-size:12px}.del:hover{background:#4b3434;color:#fff}
+label.field{display:block;margin-bottom:14px}.field span{display:block;font-size:12px;font-weight:600;color:#c7c7c7;margin-bottom:7px}
+input[type=text],input[type=url]{width:100%;color:#fff;background:#161616;border:1px solid #484848;border-radius:5px;padding:13px 12px;font-size:14px;outline:0;min-height:46px}
+input:focus{border-color:#e50914;box-shadow:0 0 0 2px rgba(229,9,20,.13)}
+input::placeholder{color:#777}
+.switch-line{display:flex;gap:8px;align-items:center;color:#ddd;font-size:13px;user-select:none}
+.switch-line input{accent-color:var(--red);width:18px;height:18px}
+.row-actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:18px}
+.btn{border:1px solid #454545;background:#303030;border-radius:4px;color:#fff;padding:14px 18px;font-weight:750;font-size:14px;min-height:48px}
+.btn:disabled{opacity:.4;cursor:not-allowed}.btn.ghost{background:transparent}.btn.primary{background:var(--red);border-color:var(--red);flex:1}.btn.primary:hover{background:#f01b24}
+.tip{margin-top:18px;color:#9b9b9b;font-size:12px;line-height:1.8}
+#message{position:fixed;left:18px;right:18px;bottom:max(20px,env(safe-area-inset-bottom));padding:14px 16px;border-radius:6px;background:#333;border:1px solid #575757;font-size:14px;text-align:center;box-shadow:0 14px 40px #0008;display:none;z-index:8}
+#message.error{background:#4a2224;border-color:#913b42}
+.empty{padding:34px 20px;border:1px dashed #414141;background:#202020;border-radius:9px;text-align:center;color:var(--dim);font-size:14px}
+footer{text-align:center;color:#686868;font-size:12px;padding:26px 10px 0}
+@media(max-width:400px){header{height:64px}.brand{font-size:22px}main{padding:0 16px 60px}.hero{padding-top:36px}.source{padding:14px}.row-actions{flex-direction:column}.row-actions .btn{width:100%}}
+</style>
+</head>
+<body>
+<header><div class="brand">Veliora</div><div class="tag">手机片源管理</div></header>
+<main>
+<section class="hero">
+<div class="eyebrow">PERSONAL MEDIA MANAGER · 私人影视配置</div>
+<h1>我的影视片源</h1>
+<p>将电影、电视剧资源地址粘贴到下方，保存后自动同步到电视。无需账号，无需云端后台。</p>
+<div class="status"><span id="statusDot" class="dot"></span><span id="statusText">正在连接电视…</span></div>
+</section>
+<div class="section-head"><h2>点播资源</h2><span class="counter" id="counter">0 / 5</span></div>
+<div class="sources" id="sources"><div class="empty">正在读取电视上的片源…</div></div>
+<div class="row-actions">
+<button id="add" type="button" class="btn ghost">＋ 添加片源</button>
+<button id="save" type="button" class="btn primary">保存并同步到电视</button>
+</div>
+<div class="tip">支持苹果 CMS V10 点播接口；电视直播列表需要单独的直播功能，不能填在这里。手机与电视需连接可互通的同一局域网；请不要将电视上的配对二维码分享给陌生人。</div>
+<footer>Veliora · 本地连接 · 不经过第三方配置服务器</footer>
+</main>
+<div id="message" role="status"></div>
+<script>
+(function(){
+"use strict";
+var secret="__PAIRING_TOKEN__";
+var sources=[];
+var nodes=document.getElementById("sources");
+var counter=document.getElementById("counter");
+var statusText=document.getElementById("statusText");
+var dot=document.getElementById("statusDot");
+var add=document.getElementById("add");
+var save=document.getElementById("save");
+function notify(text,failed){
+ var m=document.getElementById("message");m.textContent=text;m.className=failed?"error":"";m.style.display="block";
+ clearTimeout(notify.t);notify.t=setTimeout(function(){m.style.display="none";},3500);
+}
+function status(text,online){statusText.textContent=text;dot.className=online?"dot ready":"dot";}
+function field(label,value,type,placeholder,onInput){
+ var wrapper=document.createElement("label");wrapper.className="field";
+ var title=document.createElement("span");title.textContent=label;
+ var input=document.createElement("input");input.type=type;input.value=value;
+ input.placeholder=placeholder;input.addEventListener("input",function(){onInput(input.value);});
+ wrapper.appendChild(title);wrapper.appendChild(input);return wrapper;
+}
+function render(){
+ nodes.replaceChildren();counter.textContent=sources.length+" / 5";add.disabled=sources.length>=5;
+ if(!sources.length){var empty=document.createElement("div");empty.className="empty";empty.textContent="还没有片源，点击下方「添加片源」开始。";nodes.appendChild(empty);}
+ sources.forEach(function(item,i){
+  var card=document.createElement("div");card.className="source";
+  var top=document.createElement("div");top.className="source-top";
+  var num=document.createElement("span");num.className="source-index";num.textContent="片源 "+String(i+1).padStart(2,"0");
+  var del=document.createElement("button");del.type="button";del.className="del";del.textContent="删除";
+  del.addEventListener("click",function(){sources.splice(i,1);render();});
+  top.appendChild(num);top.appendChild(del);
+  card.appendChild(top);
+  card.appendChild(field("名称",item.name,"text","例如：我的点播源",function(v){item.name=v;}));
+  card.appendChild(field("点播接口地址",item.url,"url","https://example.com/api.php/provide/vod",function(v){item.url=v;}));
+  var check=document.createElement("label");check.className="switch-line";
+  var cb=document.createElement("input");cb.type="checkbox";cb.checked=item.enabled!==false;
+  cb.addEventListener("change",function(){item.enabled=cb.checked;});
+  var caption=document.createElement("span");caption.textContent="启用此片源参与搜索";
+  check.appendChild(cb);check.appendChild(caption);card.appendChild(check);
+  nodes.appendChild(card);
+ });
+}
+function api(method,data){
+ return fetch("/api/sources",{method:method,headers:{"X-Veliora-Key":secret,"Content-Type":"application/json"},body:data?JSON.stringify(data):undefined,cache:"no-store"})
+ .then(function(r){return r.json().then(function(body){if(!r.ok)throw Error(body.error||"连接失败");return body;});});
+}
+add.addEventListener("click",function(){
+ if(sources.length>=5){notify("最多添加5个片源",true);return;}
+ sources.push({name:"",url:"",enabled:true,isAdult:false});
+ render();
+ var last=nodes.lastElementChild;if(last){var input=last.querySelector("input");if(input)input.focus();}
+});
+save.addEventListener("click",function(){
+ for(var i=0;i<sources.length;i++){
+  var source=sources[i];
+  if(!source.name.trim()){notify("请填写第"+(i+1)+"个片源名称",true);return;}
+  if(!/^https?:\/\/[^\s/]+/i.test(source.url.trim())){notify("第"+(i+1)+"个接口网址无效",true);return;}
+ }
+ save.disabled=true;save.textContent="正在同步…";
+ api("POST",{sources:sources}).then(function(){
+  status("电视已连接 · 更改已保存",true);notify("保存成功，电视片源已更新");
+ }).catch(function(e){status("连接异常，请在电视打开 Veliora",false);notify(e.message,true);})
+ .finally(function(){save.disabled=false;save.textContent="保存并同步到电视";});
+});
+api("GET").then(function(v){
+ var active=Array.isArray(v.selected)?v.selected:[];
+ sources=(Array.isArray(v.sources)?v.sources:[]).map(function(s,i){
+  return {name:s.name||"",url:s.url||"",isAdult:!!s.isAdult,enabled:active.indexOf("custom_"+i)>=0};
+ });
+ render();status("电视已连接 · 可以编辑",true);
+}).catch(function(e){status("连接失败",false);nodes.textContent="读取失败："+e.message;notify(e.message,true);});
+})();
+</script>
+</body></html>
