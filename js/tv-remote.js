@@ -2090,6 +2090,35 @@
         }, 60);
     }
 
+    // 与电视同局域网的手机可扫码管理片源；数据直接同步本机 localStorage。
+    async function openPhoneConfiguration() {
+        if (!window.AndroidTV || !window.AndroidTV.phoneConfigInfo) {
+            toast('请在安卓电视安装版中使用手机扫码配置');
+            return;
+        }
+        let info;
+        try { info = JSON.parse(window.AndroidTV.phoneConfigInfo()); }
+        catch (e) { toast('启动扫码服务失败'); return; }
+        if (!info || info.error || !info.url || !info.qr) {
+            toast((info && info.error) || '电视网络暂不可用，请检查局域网');
+            return;
+        }
+        await optGate.open(
+            '<div style="font-weight:800;font-size:1.35em;color:#fff;margin-bottom:12px">手机扫码配置片源</div>' +
+            '<div style="display:flex;justify-content:center;margin:8px auto 10px">' +
+            '<img style="width:200px;height:200px;max-height:39vh;background:#fff;padding:8px;border-radius:6px" src="' + esc(info.qr) + '" alt="片源管理二维码"></div>' +
+            '<div style="font-size:.75em;color:#bbb;line-height:1.6">手机与电视连接同一个局域网，扫码后粘贴片源网址并保存。<br>网页的视觉风格与 Veliora 保持一致。</div>' +
+            '<div style="font-size:.65em;color:#aaa;margin-top:9px">' + esc(info.url.split('?')[0]) + '</div>',
+            [{ text: '关闭', value: true }]);
+    }
+
+    // 手机提交新配置后直接刷新电视片源状态，不必退出或重装应用。
+    window.velioraReloadSources = function () {
+        state.homeStale = true;
+        renderSettings();
+        toast('手机片源配置已同步');
+    };
+
     let customDelMode = false;
     function renderCustomChips() {
         const box = document.getElementById('customChips');
@@ -2112,6 +2141,7 @@
                 customDelMode ? 'close' : (sel.has(key) ? 'check' : null)));
         });
         box.appendChild(chipBtn('添加自定义源', addCustomSource, null, 'add'));
+        box.appendChild(chipBtn('手机扫码配置', openPhoneConfiguration, null, 'upload'));
         if (customs.length) {
             box.appendChild(chipBtn(customDelMode ? '完成' : '删除源', () => {
                 customDelMode = !customDelMode;
