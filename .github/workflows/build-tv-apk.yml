@@ -13,6 +13,7 @@ on:
       - 'image/**'
       - 'index.html'
       - 'player.html'
+      - 'mobile-config.html'
 
 permissions:
   contents: read
@@ -71,7 +72,8 @@ jobs:
                   raise RuntimeError(f'{name}: expected password marker missing')
               content = content.replace(marker, '"' + token + '"; ' + preseed, 1)
               (dest / name).write_text(content, encoding='utf-8')
-          print('Synced the Chinese TV interface assets.')
+          shutil.copy2(root / 'mobile-config.html', dest / 'mobile-config.html')
+          print('Synced the Chinese TV interface assets and local mobile configuration page.')
           PY
 
       - name: Build release APK
@@ -81,10 +83,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p output
-          cp android/app/build/outputs/apk/release/app-release.apk output/Veliora-TV-1.0.1.apk
-          test -s output/Veliora-TV-1.0.1.apk
+          cp android/app/build/outputs/apk/release/app-release.apk output/Veliora-TV-1.0.2.apk
+          test -s output/Veliora-TV-1.0.2.apk
           cd output
-          sha256sum Veliora-TV-1.0.1.apk > SHA256.txt
+          sha256sum Veliora-TV-1.0.2.apk > SHA256.txt
           ls -lh
 
       - name: Upload installable APK
