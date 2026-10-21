@@ -18,6 +18,8 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import androidx.webkit.WebViewAssetLoader
 import org.json.JSONArray
 import org.json.JSONObject
@@ -68,6 +70,7 @@ class MainActivity : Activity() {
     private lateinit var assetLoader: WebViewAssetLoader
     private val proxy = ProxyHandler()
     private val handler = Handler(Looper.getMainLooper())
+    private val localConfigServer by lazy { LocalConfigServer(this, ::readSourcesForPhone, ::saveSourcesFromPhone) }
 
     // 拦截到的 player.html 完整地址，供原生播放失败时回退 WebView 播放器
     private var pendingPlayerUrl: String? = null
@@ -110,6 +113,7 @@ class MainActivity : Activity() {
         pendingReport = getSharedPreferences(SHELL_PREFS, MODE_PRIVATE)
             .getString(KEY_PENDING_REPORT, null)
 
+        localConfigServer.start()
         webView = createWebView()
         root.addView(webView, matchParent())
         webView.requestFocus()
@@ -202,9 +206,66 @@ class MainActivity : Activity() {
         wv.addJavascriptInterface(object {
             @JavascriptInterface
             fun exitApp() = runOnUiThread { finish() }
+            @JavascriptInterface
+            fun phoneConfigInfo(): String = localConfigServer.phoneInfo()
         }, "AndroidTV")
 
         return wv
+    }
+
+    /**
+     * 手机访问内置局域网配置页时，从当前 WebView 的 localStorage 读取真实片源。
+     * evaluateJavascript 必须在主线程，局域网请求线程最多等待 4 秒。
+     */
+    private fun readSourcesForPhone(): String? {
+        val latch = CountDownLatch(1)
+        var value: String? = null
+        runOnUiThread {
+            if (!::webView.isInitialized) { latch.countDown(); return@runOnUiThread }
+            val js = """(function(){
+                try{return JSON.stringify({
+                    sources:JSON.parse(localStorage.getItem('customAPIs')||'[]'),
+                    selected:JSON.parse(localStorage.getItem('selectedAPIs')||'[]')
+                });}catch(e){return JSON.stringify({sources:[],selected:[]});}
+            })()"""
+            webView.evaluateJavascript(js) { result ->
+                try { value = JSONTokener(result).nextValue() as? String } catch (_: Exception) {}
+                latch.countDown()
+            }
+        }
+        return if (latch.await(4, TimeUnit.SECONDS)) value else null
+    }
+
+    /** 同步手机端最多5个片源，保留非自定义片源的选中状态，更新后刷新电视设置界面。 */
+    private fun saveSourcesFromPhone(sources: JSONArray): Boolean {
+        val latch = CountDownLatch(1)
+        var ok = false
+        val raw = JSONObject.quote(sources.toString())
+        val js = """(function(){
+            try{
+                var fresh=JSON.parse($raw);
+                var old=JSON.parse(localStorage.getItem('selectedAPIs')||'[]');
+                if(!Array.isArray(old))old=[];
+                var other=old.filter(function(x){return typeof x==='string'&&!x.startsWith('custom_');});
+                var enabled=[];
+                var apis=fresh.map(function(x,i){
+                    if(x.enabled!==false)enabled.push('custom_'+i);
+                    return {name:x.name,url:x.url,isAdult:!!x.isAdult};
+                });
+                localStorage.setItem('customAPIs',JSON.stringify(apis));
+                localStorage.setItem('selectedAPIs',JSON.stringify(other.concat(enabled)));
+                if(window.velioraReloadSources)window.velioraReloadSources();
+                return 'ok';
+            }catch(e){return 'error';}
+        })()"""
+        runOnUiThread {
+            if (!::webView.isInitialized) { latch.countDown(); return@runOnUiThread }
+            webView.evaluateJavascript(js) { result ->
+                ok = result == JS_OK
+                latch.countDown()
+            }
+        }
+        return latch.await(4, TimeUnit.SECONDS) && ok
     }
 
     /** 渲染进程死了之后原地换一只新 WebView，回到最近的页面 */
@@ -374,6 +435,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        localConfigServer.stop()
         handler.removeCallbacksAndMessages(null)
         root.removeView(webView)
         webView.destroy()
